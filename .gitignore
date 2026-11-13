@@ -3,3 +3,5 @@ __pycache__/
 .venv/
 *.xlsx
 data/*_raw.csv
+data/ukraine_admin1.geojson
+data/boundaries/
