@@ -6,7 +6,7 @@ from matplotlib.patches import Patch
 DATA_DIR = Path(__file__).resolve().parent / "data"             # data folder next to this script
 DATE = "2026-09-30"                                             # latest DTM reporting date used in the tables
 
-host = pd.read_csv(DATA_DIR / "ukraine_share_hosted.csv")       # table A: IDPs hosted by each oblast
+host = pd.read_csv(DATA_DIR / "ukraine_share_hosted.csv")       # table A: IDPs living in each oblast
 origin = pd.read_csv(DATA_DIR / "ukraine_share_origin.csv")     # table B: IDPs coming from each oblast
 
 BLUE = "#2a78d6"                                                # bars with 2022 population base
@@ -35,23 +35,40 @@ def draw(ax, df, value_col, title, xlabel):
     ax.tick_params(colors=MUTED, length=0)                      # quiet tick labels
 
 
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 8))           # one figure, two panels side by side
-draw(ax1, host, "hosted_pct_of_pop",
-     "A. Oblasts hosting the most IDPs",
-     "IDPs living in the oblast, % of its population")
-draw(ax2, origin, "displaced_pct_of_pop",
-     "B. Oblasts that lost the most people",
-     "IDPs from the oblast, % of its population")
-ax2.legend(handles=[Patch(color=BLUE, label="Population base: 1 Jan 2022"),
-                    Patch(color=ORANGE, label="Population base: 1 Jan 2014")],
-           frameon=False, loc="lower right")                    # legend for the two colours
+def make_figure(host_col, host_title, host_xlabel, origin_col, origin_title, origin_xlabel, suptitle, filename):
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 8))       # one figure, two panels side by side
+    draw(ax1, host, host_col, host_title, host_xlabel)          # left panel: where IDPs live
+    draw(ax2, origin, origin_col, origin_title, origin_xlabel)  # right panel: where IDPs come from
+    ax2.legend(handles=[Patch(color=BLUE, label="Population base: 1 Jan 2022"),
+                        Patch(color=ORANGE, label="Population base: 1 Jan 2014")],
+               frameon=False, loc="lower right")                # legend for the two colours
+    fig.suptitle(suptitle, x=0.01, ha="left", fontsize=14, color=INK)   # figure title
+    fig.text(0.01, 0.01, "Sources: IOM DTM (registration data); State Statistics Service of Ukraine. "
+             "Population is pre-war (2022; 2014 for Crimea and Sevastopol).",
+             fontsize=9, color=MUTED)                           # source note
+    fig.tight_layout(rect=(0, 0.03, 1, 0.95))                   # leave space for title and note
+    fig.savefig(DATA_DIR.parent / filename, dpi=150)            # save the picture next to the scripts
+    print("Saved", filename)
 
-fig.suptitle(f"Ukraine: registered IDPs relative to population (DTM, {DATE})",
-             x=0.01, ha="left", fontsize=14, color=INK)         # figure title
-fig.text(0.01, 0.01, "Sources: IOM DTM (registration data); State Statistics Service of Ukraine. "
-         "Population is pre-war (2022; 2014 for Crimea and Sevastopol).",
-         fontsize=9, color=MUTED)                               # source note
-fig.tight_layout(rect=(0, 0.03, 1, 0.95))                       # leave space for title and note
-fig.savefig(DATA_DIR.parent / "ukraine_shares.png", dpi=150)    # save the picture next to the scripts
-print("Saved ukraine_shares.png")
-plt.show()                                                      # open the window (close it to finish)
+
+# Figure 1: ALL registered IDPs (including people who moved inside their own oblast)
+make_figure("hosted_pct_of_pop",
+            "A. All IDPs living in the oblast",
+            "IDPs living in the oblast, % of its population",
+            "displaced_pct_of_pop",
+            "B. All IDPs who came from the oblast",
+            "IDPs from the oblast, % of its population",
+            f"Ukraine: all registered IDPs relative to population (DTM, {DATE})",
+            "ukraine_shares_all.png")
+
+# Figure 2: only IDPs who moved to ANOTHER oblast
+make_figure("from_other_pct_of_pop",
+            "A. IDPs from other oblasts living in the oblast",
+            "IDPs from other oblasts, % of the oblast's population",
+            "left_oblast_pct_of_pop",
+            "B. IDPs who left the oblast for another oblast",
+            "IDPs who left, % of the oblast's population",
+            f"Ukraine: registered IDPs who moved between oblasts, relative to population (DTM, {DATE})",
+            "ukraine_shares_moved.png")
+
+plt.show()                                                      # open both windows (close them to finish)
